@@ -1,0 +1,36 @@
+# PR自動レビュー
+# トリガー: PR作成時・更新時に自動実行（Claude自身のPRは除外）
+name: Claude Auto Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    if: |
+      github.event.pull_request.draft == false &&
+      github.actor != 'claude[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: claude-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            このPRをコードレビューしてください。
+            .github/prompts/review.md のルールに従ってください。
+
+            レビュー結果をPRコメントとして投稿してください。
+            Critical/High の指摘がなければ approve してください。
+          claude_args: "--max-turns 10 --max-budget-usd 2.00 --model claude-sonnet-4-6"

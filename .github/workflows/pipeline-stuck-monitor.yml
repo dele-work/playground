@@ -1,0 +1,57 @@
+# パイプライン停滞監視 — 5分間隔で停滞を検知し自動回復を試行
+name: Pipeline Stuck Monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for stuck pipelines
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          NOW=$(date +%s)
+          STUCK_THRESHOLD=1800  # 30分
+
+          # claude:implement ラベル付きで30分以上PRが作られていないIssue
+          gh api "repos/$REPO/issues" \
+            --paginate \
+            --jq '.[] | select(.labels[].name == "claude:implement") | select(.pull_request == null)' \
+            | jq -r '.number' | while read ISSUE_NUM; do
+
+            UPDATED=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json updatedAt -q '.updatedAt')
+            UPDATED_TS=$(date -d "$UPDATED" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$UPDATED" +%s 2>/dev/null || echo "0")
+            DIFF=$((NOW - UPDATED_TS))
+
+            if [ "$DIFF" -gt "$STUCK_THRESHOLD" ]; then
+              echo "Issue #$ISSUE_NUM appears stuck (${DIFF}s since last update)"
+
+              # human:review-needed がなければ自動回復を試行
+              HAS_HUMAN=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json labels \
+                --jq '.labels[].name' | grep "human:review-needed" || true)
+
+              if [ -z "$HAS_HUMAN" ]; then
+                # ラベルを一度外して再付与（ワークフロー再トリガー）
+                gh issue edit "$ISSUE_NUM" --remove-label "claude:implement" --repo "$REPO" || true
+                sleep 2
+                gh issue edit "$ISSUE_NUM" --add-label "claude:implement" --repo "$REPO"
+                echo "Retried Issue #$ISSUE_NUM"
+              fi
+            fi
+          done
+
+          echo "Monitor check complete"

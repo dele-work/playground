@@ -1,0 +1,49 @@
+# Issue → 自動実装 → PR作成
+# トリガー: Issue に `claude:implement` ラベルを付与
+name: Claude Implement from Issue
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  implement:
+    if: github.event.label.name == 'claude:implement'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: claude-implement-${{ github.event.issue.number }}
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            以下のIssueの内容に基づいて実装してください。
+
+            ## Issue #${{ github.event.issue.number }}
+            タイトル: ${{ github.event.issue.title }}
+
+            ## 手順
+            1. Issueの要件を読み取る
+            2. `feat/${{ github.event.issue.number }}` ブランチを作成
+            3. 既存コードのパターンを確認してから実装
+            4. テストを書く
+            5. リント・テストを実行して通ることを確認
+            6. PRを作成（本文に `closes #${{ github.event.issue.number }}` を含める）
+
+            ## 制約
+            - .github/prompts/implement.md のルールに従うこと
+            - 変更は最小限に
+            - 不明点があればIssueにコメントして `human:review-needed` ラベルを付与
+          claude_args: "--max-turns 30 --max-budget-usd 5.00 --model claude-sonnet-4-6"

@@ -1,0 +1,65 @@
+# CI全通過後の自動マージ
+# トリガー: PRに `claude:auto-merge` ラベルを付与
+name: Claude Auto Merge
+
+on:
+  pull_request:
+    types: [labeled]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-merge:
+    if: |
+      (github.event_name == 'pull_request' &&
+       github.event.label.name == 'claude:auto-merge') ||
+      (github.event_name == 'check_suite' &&
+       github.event.check_suite.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check labels and CI status
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # check_suite の場合、対象PRを特定
+          if [ "${{ github.event_name }}" = "check_suite" ]; then
+            PRS=$(gh api "repos/$REPO/commits/${{ github.event.check_suite.head_sha }}/pulls" \
+              --jq '.[].number')
+          else
+            PRS="${{ github.event.pull_request.number }}"
+          fi
+
+          for PR_NUM in $PRS; do
+            # auto-merge ラベルがあるか確認
+            HAS_LABEL=$(gh pr view "$PR_NUM" --repo "$REPO" --json labels \
+              --jq '.labels[].name' | grep -x "claude:auto-merge" || true)
+
+            if [ -z "$HAS_LABEL" ]; then
+              continue
+            fi
+
+            # 全CIチェックが通っているか確認
+            STATUS=$(gh pr checks "$PR_NUM" --repo "$REPO" --json state \
+              --jq '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED")] | length' 2>/dev/null || echo "1")
+
+            if [ "$STATUS" = "0" ]; then
+              echo "Merging PR #$PR_NUM"
+              gh pr merge "$PR_NUM" --repo "$REPO" --squash --delete-branch
+
+              # 関連Issueをクローズ
+              BODY=$(gh pr view "$PR_NUM" --repo "$REPO" --json body -q '.body')
+              ISSUE_NUM=$(echo "$BODY" | grep -oP 'closes #\K\d+' || true)
+              if [ -n "$ISSUE_NUM" ]; then
+                gh issue close "$ISSUE_NUM" --repo "$REPO"
+              fi
+            fi
+          done
