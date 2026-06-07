@@ -1,0 +1,35 @@
+# Issue自動トリアージ — 新規Issueを分類してラベル付与
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+  id-token: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            新しいIssue #${{ github.event.issue.number }} をトリアージしてください。
+
+            1. Issueのタイトルと本文を読む
+            2. 種類を判定: bug / enhancement / question
+            3. 適切なラベルを付与
+            4. 実装可能な明確な要求であれば `claude:implement` ラベルも付与
+            5. 要件が曖昧な場合は `claude:requirements` ラベルを付与して壁打ちを開始
+            6. 判断できない場合は `human:review-needed` ラベルを付与
+          claude_args: "--max-turns 5 --max-budget-usd 0.50 --model claude-sonnet-4-6 --permission-mode dontAsk"

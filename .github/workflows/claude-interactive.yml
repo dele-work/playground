@@ -6,6 +6,8 @@ on:
     types: [created]
   pull_request_review_comment:
     types: [created]
+  issues:
+    types: [assigned]
 
 permissions:
   contents: write
@@ -15,16 +17,22 @@ permissions:
 
 jobs:
   claude:
-    if: contains(github.event.comment.body, '@claude')
+    if: |
+      (github.event_name != 'issues' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'issues' && github.event.action == 'assigned')
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    concurrency:
+      group: claude-interactive-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--max-turns 20 --max-budget-usd 3.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep,WebSearch'"
+          assignee_trigger: "claude"
+          claude_args: "--max-turns 20 --max-budget-usd 3.00 --model claude-sonnet-4-6 --permission-mode dontAsk"

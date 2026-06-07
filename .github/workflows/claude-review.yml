@@ -1,10 +1,16 @@
 # PR自動レビュー
-# トリガー: PR作成時・更新時に自動実行（Claude自身のPRは除外）
+# トリガー: PR作成時・更新時に自動実行
+# Claude[bot]のPR、ドキュメントのみの変更は除外
 name: Claude Auto Review
 
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".github/scripts/**"
+      - "LICENSE"
 
 permissions:
   contents: read
@@ -24,6 +30,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: anthropics/claude-code-action@v1
         with:
@@ -32,6 +40,14 @@ jobs:
             このPRをコードレビューしてください。
             .github/prompts/review.md のルールに従ってください。
 
-            レビュー結果をPRコメントとして投稿してください。
+            レビュー観点:
+            1. セキュリティリスク（OWASP Top 10）
+            2. ロジックの正確性
+            3. テストカバレッジ
+            4. アーキテクチャ適合性
+
             Critical/High の指摘がなければ approve してください。
-          claude_args: "--max-turns 10 --max-budget-usd 2.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep'"
+            指摘は該当行にインラインコメントで残してください。
+          claude_args: "--max-turns 10 --max-budget-usd 2.00 --model claude-sonnet-4-6 --permission-mode dontAsk"
+          additional_permissions: |
+            checks: read

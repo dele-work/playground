@@ -5,9 +5,7 @@ name: Claude Full Auto Pipeline
 
 on:
   pull_request:
-    types: [labeled]
-  check_suite:
-    types: [completed]
+    types: [labeled, synchronize]
 
 permissions:
   contents: write
@@ -18,123 +16,87 @@ permissions:
 jobs:
   pipeline:
     if: |
-      (github.event_name == 'pull_request' &&
-       startsWith(github.event.label.name, 'claude:full-auto')) ||
-      (github.event_name == 'check_suite')
+      (github.event.action == 'labeled' && startsWith(github.event.label.name, 'claude:full-auto')) ||
+      (github.event.action == 'synchronize' &&
+       (contains(github.event.pull_request.labels.*.name, 'claude:full-auto') ||
+        contains(github.event.pull_request.labels.*.name, 'claude:full-auto(auto-merge)')))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     concurrency:
-      group: claude-pipeline-${{ github.event.pull_request.number || github.event.check_suite.head_sha }}
+      group: claude-pipeline-${{ github.event.pull_request.number }}
       cancel-in-progress: false
 
     steps:
-      - name: Determine PR and state
-        id: state
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Determine pipeline mode
+        id: mode
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR_NUM="${{ github.event.pull_request.number }}"
-          else
-            PR_NUM=$(gh api "repos/$REPO/commits/${{ github.event.check_suite.head_sha }}/pulls" \
-              --jq '.[0].number' 2>/dev/null || echo "")
-          fi
-
-          if [ -z "$PR_NUM" ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # full-auto ラベルがあるか確認
-          LABELS=$(gh pr view "$PR_NUM" --repo "$REPO" --json labels --jq '.labels[].name')
-          HAS_FULL_AUTO=$(echo "$LABELS" | grep "claude:full-auto" || true)
-
-          if [ -z "$HAS_FULL_AUTO" ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "pr_num=$PR_NUM" >> "$GITHUB_OUTPUT"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-
-          # auto-merge 付きか判定
+          LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels --jq '.labels[].name')
           if echo "$LABELS" | grep -q "claude:full-auto(auto-merge)"; then
             echo "auto_merge=true" >> "$GITHUB_OUTPUT"
           else
             echo "auto_merge=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v4
-        if: steps.state.outputs.skip != 'true'
-        with:
-          fetch-depth: 0
-
-      - name: Check CI status and run pipeline
-        if: steps.state.outputs.skip != 'true'
+      - name: Check CI status
+        id: ci
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          PR_NUM: ${{ steps.state.outputs.pr_num }}
         run: |
-          # CI結果を確認
-          FAILED=$(gh pr checks "$PR_NUM" --repo "$REPO" --json state \
+          FAILED=$(gh pr checks ${{ github.event.pull_request.number }} --repo "$REPO" --json state \
             --jq '[.[] | select(.state == "FAILURE")] | length' 2>/dev/null || echo "0")
+          echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
 
-          if [ "$FAILED" != "0" ]; then
-            echo "ci_failed=true" >> "$GITHUB_ENV"
-          else
-            echo "ci_failed=false" >> "$GITHUB_ENV"
-          fi
-
-      # Step 1: CI失敗なら修正
+      # CI失敗なら修正
       - name: Fix CI failures
-        if: steps.state.outputs.skip != 'true' && env.ci_failed == 'true'
+        if: steps.ci.outputs.failed != '0'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            PR #${{ steps.state.outputs.pr_num }} のCIが失敗しています。
+            PR #${{ github.event.pull_request.number }} のCIが失敗しています。
             .github/prompts/fix-ci.md に従って修正してください。
-          claude_args: "--max-turns 10 --max-budget-usd 3.00 --model claude-sonnet-4-6"
+          claude_args: "--max-turns 10 --max-budget-usd 3.00 --model claude-sonnet-4-6 --permission-mode dontAsk"
+          additional_permissions: |
+            actions: read
+            checks: read
 
-      # Step 2: レビュー実行
-      - name: Auto review
-        if: steps.state.outputs.skip != 'true' && env.ci_failed != 'true'
+      # CI通過ならレビュー＆修正
+      - name: Review and fix
+        if: steps.ci.outputs.failed == '0'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            PR #${{ steps.state.outputs.pr_num }} をレビューしてください。
+            PR #${{ github.event.pull_request.number }} をレビューし、
+            Critical/High の指摘があれば自分で修正してください。
             .github/prompts/review.md に従ってください。
+            修正したらコミットしてください。
+            指摘がなければ approve してください。
+          claude_args: "--max-turns 15 --max-budget-usd 3.00 --model claude-sonnet-4-6 --permission-mode dontAsk"
 
-            Critical/High の指摘がある場合:
-            1. 指摘内容をPRコメントに投稿
-            2. 可能なら自動修正してコミット
-
-            指摘がない場合:
-            1. approve
-          claude_args: "--max-turns 15 --max-budget-usd 3.00 --model claude-sonnet-4-6"
-
-      # Step 3: 自動マージ（オプション）
-      - name: Auto merge if enabled
-        if: |
-          steps.state.outputs.skip != 'true' &&
-          steps.state.outputs.auto_merge == 'true' &&
-          env.ci_failed != 'true'
+      # 自動マージ
+      - name: Auto merge
+        if: steps.ci.outputs.failed == '0' && steps.mode.outputs.auto_merge == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          PR_NUM: ${{ steps.state.outputs.pr_num }}
+          PR_NUM: ${{ github.event.pull_request.number }}
         run: |
-          # 全チェック通過を再確認
           PENDING=$(gh pr checks "$PR_NUM" --repo "$REPO" --json state \
             --jq '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED")] | length' 2>/dev/null || echo "1")
 
           if [ "$PENDING" = "0" ]; then
             gh pr merge "$PR_NUM" --repo "$REPO" --squash --delete-branch
           else
-            echo "CI checks not all passed, skipping auto-merge"
             gh pr comment "$PR_NUM" --repo "$REPO" \
-              --body "Auto-merge skipped: CI checks not all passed. Please review manually."
+              --body "Auto-merge skipped: CI checks not all passed."
+            gh pr edit "$PR_NUM" --repo "$REPO" --add-label "human:review-needed"
           fi

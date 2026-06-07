@@ -24,22 +24,19 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Check labels and CI status
-        id: check
+      - name: Check labels and CI status, then merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          # check_suite の場合、対象PRを特定
           if [ "${{ github.event_name }}" = "check_suite" ]; then
             PRS=$(gh api "repos/$REPO/commits/${{ github.event.check_suite.head_sha }}/pulls" \
-              --jq '.[].number')
+              --jq '.[].number' 2>/dev/null || echo "")
           else
             PRS="${{ github.event.pull_request.number }}"
           fi
 
           for PR_NUM in $PRS; do
-            # auto-merge ラベルがあるか確認
             HAS_LABEL=$(gh pr view "$PR_NUM" --repo "$REPO" --json labels \
               --jq '.labels[].name' | grep -x "claude:auto-merge" || true)
 
@@ -48,10 +45,10 @@ jobs:
             fi
 
             # 全CIチェックが通っているか確認
-            STATUS=$(gh pr checks "$PR_NUM" --repo "$REPO" --json state \
+            FAILED=$(gh pr checks "$PR_NUM" --repo "$REPO" --json state \
               --jq '[.[] | select(.state != "SUCCESS" and .state != "SKIPPED")] | length' 2>/dev/null || echo "1")
 
-            if [ "$STATUS" = "0" ]; then
+            if [ "$FAILED" = "0" ]; then
               echo "Merging PR #$PR_NUM"
               gh pr merge "$PR_NUM" --repo "$REPO" --squash --delete-branch
 
@@ -59,7 +56,7 @@ jobs:
               BODY=$(gh pr view "$PR_NUM" --repo "$REPO" --json body -q '.body')
               ISSUE_NUM=$(echo "$BODY" | grep -oP 'closes #\K\d+' || true)
               if [ -n "$ISSUE_NUM" ]; then
-                gh issue close "$ISSUE_NUM" --repo "$REPO"
+                gh issue close "$ISSUE_NUM" --repo "$REPO" || true
               fi
             fi
           done

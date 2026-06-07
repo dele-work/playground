@@ -1,0 +1,44 @@
+# バトンリレー — Issueクローズ時に後続の依存Issueを自動起動
+name: Auto Label on Issue Close
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  unblock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Unblock dependent issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CLOSED_ISSUE: ${{ github.event.issue.number }}
+        run: |
+          # blocked-by: #N を本文に含むIssueを検索
+          gh issue list --repo "$REPO" --state open --json number,body \
+            --jq ".[] | select(.body | test(\"blocked-by: #$CLOSED_ISSUE\")) | .number" \
+            | while read -r DEP_NUM; do
+
+            # 残りのブロッカーがあるかチェック
+            BODY=$(gh issue view "$DEP_NUM" --repo "$REPO" --json body -q '.body')
+            ALL_CLEAR=true
+
+            echo "$BODY" | grep -oP 'blocked-by: #\K\d+' | while read -r BLOCKER; do
+              STATE=$(gh issue view "$BLOCKER" --repo "$REPO" --json state -q '.state')
+              if [ "$STATE" != "CLOSED" ]; then
+                ALL_CLEAR=false
+                break
+              fi
+            done
+
+            if [ "$ALL_CLEAR" = "true" ]; then
+              echo "Unblocking Issue #$DEP_NUM"
+              gh issue edit "$DEP_NUM" --add-label "claude:implement" --repo "$REPO"
+            fi
+          done

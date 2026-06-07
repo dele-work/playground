@@ -1,5 +1,5 @@
 # CI失敗時の自動修正
-# トリガー: PRに `claude:fix-ci` ラベルを付与（手動 or 自動）
+# トリガー: PRに `claude:fix-ci` ラベルを付与
 name: Claude Fix CI
 
 on:
@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 2
 
       - uses: anthropics/claude-code-action@v1
         with:
@@ -34,16 +35,18 @@ jobs:
 
             1. CIログを確認して失敗原因を特定
             2. 最小限の修正を適用
-            3. 修正をコミット＆プッシュ
+            3. 修正をコミット
 
-            修正後、`claude:fix-ci` ラベルを削除してください。
-            修正できない場合は `human:review-needed` ラベルを付与してください。
-          claude_args: "--max-turns 15 --max-budget-usd 3.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep'"
+            修正できない場合は `human:review-needed` ラベルを付与してPRにコメントしてください。
+          claude_args: "--max-turns 15 --max-budget-usd 3.00 --model claude-sonnet-4-6 --permission-mode dontAsk"
+          additional_permissions: |
+            actions: read
+            checks: read
 
       - name: Remove fix-ci label
-        if: success()
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr edit ${{ github.event.pull_request.number }} \
-            --remove-label "claude:fix-ci"
+            --remove-label "claude:fix-ci" || true

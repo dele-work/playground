@@ -1,5 +1,6 @@
 # Issue → 自動実装 → PR作成
 # トリガー: Issue に `claude:implement` ラベルを付与
+# PR作成・ブランチ作成はアクションが自動で行う
 name: Claude Implement from Issue
 
 on:
@@ -29,22 +30,19 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          branch_prefix: "feat/"
           prompt: |
-            以下のIssueの内容に基づいて実装してください。
-
-            ## Issue #${{ github.event.issue.number }}
+            Issue #${{ github.event.issue.number }} の内容に基づいて実装してください。
             タイトル: ${{ github.event.issue.title }}
 
-            ## 手順
+            手順:
             1. Issueの要件を読み取る
-            2. `feat/${{ github.event.issue.number }}` ブランチを作成
-            3. 既存コードのパターンを確認してから実装
-            4. テストを書く
-            5. リント・テストを実行して通ることを確認
-            6. PRを作成（本文に `closes #${{ github.event.issue.number }}` を含める）
+            2. 既存コードのパターンを確認してから実装
+            3. テストを書く
+            4. リント・テストを実行して通ることを確認
 
-            ## 制約
+            制約:
             - .github/prompts/implement.md のルールに従うこと
             - 変更は最小限に
             - 不明点があればIssueにコメントして `human:review-needed` ラベルを付与
-          claude_args: "--max-turns 30 --max-budget-usd 5.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep,WebSearch'"
+          claude_args: "--max-turns 30 --max-budget-usd 5.00 --model claude-sonnet-4-6 --permission-mode dontAsk"
