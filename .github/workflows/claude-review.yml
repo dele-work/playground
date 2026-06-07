@@ -34,4 +34,4 @@ jobs:
 
             レビュー結果をPRコメントとして投稿してください。
             Critical/High の指摘がなければ approve してください。
-          claude_args: "--max-turns 10 --max-budget-usd 2.00 --model claude-sonnet-4-6"
+          claude_args: "--max-turns 10 --max-budget-usd 2.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep'"

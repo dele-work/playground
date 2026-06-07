@@ -47,4 +47,4 @@ jobs:
             - .github/prompts/implement.md のルールに従うこと
             - 変更は最小限に
             - 不明点があればIssueにコメントして `human:review-needed` ラベルを付与
-          claude_args: "--max-turns 30 --max-budget-usd 5.00 --model claude-sonnet-4-6"
+          claude_args: "--max-turns 30 --max-budget-usd 5.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep,WebSearch'"

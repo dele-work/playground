@@ -38,7 +38,7 @@ jobs:
 
             修正後、`claude:fix-ci` ラベルを削除してください。
             修正できない場合は `human:review-needed` ラベルを付与してください。
-          claude_args: "--max-turns 15 --max-budget-usd 3.00 --model claude-sonnet-4-6"
+          claude_args: "--max-turns 15 --max-budget-usd 3.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep'"
 
       - name: Remove fix-ci label
         if: success()

@@ -27,4 +27,4 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--max-turns 20 --max-budget-usd 3.00 --model claude-sonnet-4-6"
+          claude_args: "--max-turns 20 --max-budget-usd 3.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep,WebSearch'"

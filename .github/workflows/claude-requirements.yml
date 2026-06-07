@@ -44,4 +44,4 @@ jobs:
             1. 最終的な要件定義書をIssueコメントに投稿
             2. `claude:requirements` ラベルを削除
             3. `claude:implement` ラベルを付与（実装エージェントを起動）
-          claude_args: "--max-turns 15 --max-budget-usd 3.00 --model claude-sonnet-4-6"
+          claude_args: "--max-turns 15 --max-budget-usd 3.00 --model claude-sonnet-4-6 --allowedTools 'Bash,Read,Write,Edit,Glob,Grep'"
