@@ -19,7 +19,8 @@ Conventional commits, as documented in `CLAUDE.md` and enforced by
 ```
 
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`,
-`ci`, `build`, `revert`. Header ≤ 100 chars; subject not in Title/Sentence/UPPER case.
+`ci`, `build`, `revert`. Header ≤ 100 chars. (Subject-case is not enforced —
+Japanese subjects are expected.)
 
 ## Pull requests
 
