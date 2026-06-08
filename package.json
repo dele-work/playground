@@ -1,0 +1,18 @@
+{
+  "name": "harness-engineering-playground",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI agent pipeline playground — autonomous Claude Code workflows on GitHub Actions.",
+  "type": "commonjs",
+  "scripts": {
+    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
+    "test": "node --test 2>/dev/null || echo 'no unit tests yet'",
+    "build": "echo 'no build step (configuration/docs repository)'"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "markdownlint-cli2": "^0.14.0"
+  }
+}
