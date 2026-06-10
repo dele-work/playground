@@ -7,12 +7,16 @@
   "scripts": {
     "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\"",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,yml,yaml,css}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,yml,yaml,css}\" --ignore-path .gitignore",
     "test": "node --test 2>/dev/null || echo 'no unit tests yet'",
-    "build": "echo 'no build step (configuration/docs repository)'"
+    "build": "echo 'no build step (configuration/docs repository)'",
+    "verify": "npm run lint && npm run test"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",
     "@commitlint/config-conventional": "^19.0.0",
-    "markdownlint-cli2": "^0.14.0"
+    "markdownlint-cli2": "^0.14.0",
+    "prettier": "^3.3.0"
   }
 }
