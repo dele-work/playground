@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# SessionStart hook: orient the agent automatically at the start of every session.
+# SessionStart フック: セッション開始時にエージェントへ自動で状況を伝える。
 #
-# Stdout from a SessionStart hook is injected into Claude's context, so this
-# prints a compact briefing (branch, working-tree state, recent commits, and any
-# in-flight long-task ledger) and quietly prepares the environment (npm install
-# if node_modules is missing). Self-contained: bash + git + coreutils only.
+# SessionStart フックの stdout は Claude のコンテキストに注入されるため、
+# ここでは簡潔なブリーフィング(ブランチ、ワーキングツリーの状態、直近の
+# コミット、進行中の長期タスク台帳)を出力し、環境の準備(node_modules が
+# 無ければ npm install)も静かに行う。依存は bash + git + coreutils のみ。
 #
-# Hook protocol: exit 0 always — orientation must never block a session.
+# ※ 出力は AI が読むため英語(言語ポリシーは CONTRIBUTING.md 参照)。
+#
+# フックプロトコル: 常に exit 0 — ブリーフィングがセッションを
+# ブロックしてはならない。
 set -uo pipefail
 
 cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
@@ -31,7 +34,7 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git log --oneline -5 2>/dev/null | sed 's/^/    /'
 fi
 
-# Surface the long-task ledger so interrupted work resumes automatically.
+# 長期タスク台帳を表示し、中断していた作業が自動で再開されるようにする。
 ledger=".claude/state/TASKS.md"
 if [ -f "$ledger" ] && grep -qE '^\s*- \[ \]' "$ledger" 2>/dev/null; then
   echo
@@ -40,7 +43,7 @@ if [ -f "$ledger" ] && grep -qE '^\s*- \[ \]' "$ledger" 2>/dev/null; then
   grep -E '^\s*- \[.\]' "$ledger" | head -15 | sed 's/^/    /'
 fi
 
-# Prepare the toolchain in the background so lint/test/format work immediately.
+# lint/test/format がすぐ使えるよう、ツールチェーンをバックグラウンドで準備。
 if [ -f package.json ] && [ ! -d node_modules ] && command -v npm >/dev/null 2>&1; then
   echo
   echo "- Installing npm dependencies in the background (node_modules was missing)…"

@@ -1,28 +1,31 @@
 #!/usr/bin/env bash
-# PreToolUse hook: block git commit/push if staged changes contain likely secrets.
+# PreToolUse フック: ステージ済み変更にシークレットらしき内容があれば
+# git commit / git push をブロックする。
 #
-# Self-contained (no dependencies beyond git + standard coreutils). Adapted in
-# spirit from ECC's secret-detection hooks, but rewritten to be dependency-free
-# so it works inside the GitHub Actions pipeline and local sessions alike.
+# 自己完結(依存は git + 標準 coreutils のみ)。発想は ECC のシークレット
+# 検出フックを踏襲しつつ、GitHub Actions パイプラインとローカルセッションの
+# 両方で動くよう依存なしで書き直したもの。
 #
-# Hook protocol: reads the tool-call JSON on stdin. Exit 0 = allow.
-# Exit 2 = block; stderr is shown to Claude so it can fix the issue.
+# フックプロトコル: stdin からツールコール JSON を読む。exit 0 = 許可。
+# exit 2 = ブロック(stderr が Claude に渡り、修正を促す)。
+# ※ stderr のメッセージは Claude に渡るため英語(CONTRIBUTING.md 参照)。
 set -euo pipefail
 
 payload="$(cat 2>/dev/null || true)"
 
-# Only act on git commit / git push Bash commands.
+# git commit / git push の Bash コマンドのみ対象。
 case "$payload" in
   *"git commit"*|*"git push"*) ;;
   *) exit 0 ;;
 esac
 
-# Inspect staged content; fall back to the full working diff.
+# ステージ済みの内容を検査。無ければワーキングツリー全体の diff に
+# フォールバック。
 diff="$(git diff --cached 2>/dev/null || true)"
 [ -z "$diff" ] && diff="$(git diff 2>/dev/null || true)"
 [ -z "$diff" ] && exit 0
 
-# High-signal secret patterns. Keep conservative to avoid false positives.
+# シグナルの強いシークレットパターンのみ。誤検知を避けるため保守的に保つ。
 patterns='(sk-[A-Za-z0-9]{20,})|(AKIA[0-9A-Z]{16})|(ghp_[A-Za-z0-9]{36})|(github_pat_[A-Za-z0-9_]{40,})|(xox[baprs]-[A-Za-z0-9-]{10,})|(-----BEGIN [A-Z ]*PRIVATE KEY-----)|((api[_-]?key|secret|password|token)["'"'"'[:space:]]*[:=]["'"'"'[:space:]]*[A-Za-z0-9/_+\-]{16,})'
 
 hits="$(printf '%s\n' "$diff" | grep -aiEn "$patterns" || true)"

@@ -81,6 +81,12 @@ npm run verify   # lint + test(コミット前に実行)
 npm run build    # ビルド
 ```
 
+## ドキュメント言語ポリシー
+
+人間向けドキュメントは日本語、AI がランタイムで読み込むファイル
+(`CLAUDE.md`、rules 本文、agents、skills、commands、prompts)は精度優先で
+英語です。詳細は `CONTRIBUTING.md` を参照してください。
+
 ## コーディング規約
 
 - TypeScript strict mode

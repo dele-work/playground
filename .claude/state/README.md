@@ -1,13 +1,13 @@
 # .claude/state
 
-Durable state for long-horizon agent work.
+長期にわたるエージェント作業のための永続状態ディレクトリです。
 
-- `TASKS.md` — the long-task ledger managed by `/long-task` (and `/ship` for
-  large requests). Committed together with the work it describes, so progress
-  survives context compaction, session restarts, and fresh containers. The
-  SessionStart hook (`.claude/hooks/session-start.sh`) surfaces open items at
-  the start of every session automatically.
+- `TASKS.md` — `/long-task`(および大きな依頼時の `/ship`)が管理する
+  長期タスク台帳。作業内容と一緒にコミットされるため、コンテキスト圧縮・
+  セッション再起動・新しいコンテナをまたいで進捗が保持されます。
+  SessionStart フック(`.claude/hooks/session-start.sh`)がセッション開始時に
+  未完了項目を自動で表示します。
 
-Transient scratch files do not belong here — anything in this directory is
-meant to be committed and read by a future session with no memory of the
-current one.
+一時的なスクラッチファイルはここに置かないでください — このディレクトリの
+内容はコミットされ、現在のセッションの記憶を持たない未来のセッションが
+読むことを前提としています。

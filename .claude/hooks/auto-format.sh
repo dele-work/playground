@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
-# PostToolUse hook (Edit|Write): auto-format the file that was just modified.
+# PostToolUse フック (Edit|Write): 直前に変更されたファイルを自動フォーマット。
 #
-# Keeps formatting out of the agent's head entirely — every edited file is
-# normalized immediately (Prettier for code/config, markdownlint --fix for
-# Markdown), so review diffs stay clean without anyone running a formatter.
+# フォーマットをエージェントの記憶から完全に切り離す — 編集された
+# ファイルは即座に正規化される(コード/設定は Prettier、Markdown は
+# markdownlint --fix)ので、誰もフォーマッタを手で実行しなくても
+# レビュー時の diff が常にクリーンに保たれる。
 #
-# Best-effort by design: uses locally installed tools only (npx --no-install),
-# never blocks, always exits 0.
+# 設計上ベストエフォート: ローカルにインストール済みのツールのみ使用
+# (npx --no-install)。決してブロックせず、常に exit 0。
 set -uo pipefail
 
 payload="$(cat 2>/dev/null || true)"
 [ -z "$payload" ] && exit 0
 
-# Extract file_path from the tool-call JSON (jq if present, sed fallback).
+# ツールコール JSON から file_path を抽出(jq があれば jq、なければ sed)。
 if command -v jq >/dev/null 2>&1; then
   file="$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
 else

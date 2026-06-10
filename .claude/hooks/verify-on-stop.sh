@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Stop hook: automatic verification loop before the agent finishes a turn.
+# Stop フック: エージェントがターンを終える前の自動検証ループ。
 #
-# If the session changed files but lint is failing, block the stop (exit 2)
-# and hand the failure output back to Claude so it fixes the problem and only
-# then finishes. This turns "run lint before committing" from a rule the agent
-# must remember into something the harness enforces automatically.
+# このセッションでファイルが変更されたのに lint が落ちている場合、終了を
+# ブロックし(exit 2)、失敗内容を Claude に差し戻して修正させてから
+# 終了させる。「コミット前に lint を実行する」をエージェントが覚えておく
+# ルールから、ハーネスが自動で強制する仕組みに変える。
 #
-# Loop guard: when the payload carries stop_hook_active=true we are already in
-# a continuation triggered by this hook — never block twice in a row.
+# ループガード: ペイロードに stop_hook_active=true がある場合は、この
+# フック自身が起こした継続の中にいる — 2連続でブロックしてはならない。
+#
+# ※ stderr のメッセージは Claude に渡るため英語(CONTRIBUTING.md 参照)。
 set -uo pipefail
 
 payload="$(cat 2>/dev/null || true)"
@@ -17,12 +19,12 @@ esac
 
 cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
 
-# Nothing changed this session → nothing to verify.
+# このセッションで何も変わっていない → 検証するものがない。
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 [ -z "$(git status --porcelain 2>/dev/null)" ] && exit 0
 
-# Toolchain not ready (e.g. fresh container, install still running) → skip
-# rather than fail noisily.
+# ツールチェーン未準備(新しいコンテナで install 実行中など)→ うるさく
+# 失敗するのではなくスキップする。
 [ -f package.json ] || exit 0
 [ -d node_modules ] || exit 0
 command -v npm >/dev/null 2>&1 || exit 0

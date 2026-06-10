@@ -1,23 +1,27 @@
-# Rules
+# ルール
 
-Always-follow guidelines for this repository. Claude Code loads these
-automatically; the autonomous pipeline references them through `CLAUDE.md` and
-the agent prompts. Adapted and trimmed from [ECC](https://github.com/affaan-m/ECC)
-to fit this repo (an AI-agent GitHub Actions pipeline).
+このリポジトリで常時適用されるガイドラインです。Claude Code が自動で
+読み込み、自律パイプラインは `CLAUDE.md` とエージェントプロンプト経由で
+参照します。[ECC](https://github.com/affaan-m/ECC) を本リポジトリ
+(AI エージェント GitHub Actions パイプライン)向けに調整・削減したものです。
 
-## Index
+> 各ルールの本文は AI のコンテキストに直接読み込まれるため英語で記述して
+> います(言語ポリシーは `CONTRIBUTING.md` 参照)。この README は人間向けの
+> 索引です。
 
-| Rule | Scope | Summary |
-|------|-------|---------|
-| [security.md](./security.md) | all | Secrets, input validation, untrusted-input defense, response protocol |
-| [code-review.md](./code-review.md) | all | When/how to review, severity model, checklist |
-| [coding-style.md](./coding-style.md) | all | KISS/DRY/YAGNI, immutability, file size, naming |
-| [testing.md](./testing.md) | all | 80% coverage, TDD loop, AAA structure |
-| [development-workflow.md](./development-workflow.md) | all | Research → plan → TDD → review → commit |
-| [git-workflow.md](./git-workflow.md) | all | Conventional commit format, PR workflow |
-| [performance.md](./performance.md) | all | Model selection, context-window management |
-| [patterns.md](./patterns.md) | all | Repository pattern, API response envelope |
-| [agents.md](./agents.md) | all | The subagents in `.claude/agents/` and when to use them |
-| [typescript.md](./typescript.md) | `*.ts,*.tsx,*.js,*.jsx` | Type safety, async correctness, validation |
+## 索引
 
-Path-scoped rules declare their scope via a `paths:` YAML frontmatter block.
+| ルール | 適用範囲 | 概要 |
+|--------|---------|------|
+| [security.md](./security.md) | 全体 | シークレット、入力検証、信頼できない入力への防御、インシデント対応 |
+| [code-review.md](./code-review.md) | 全体 | レビューのタイミングと方法、重大度モデル、チェックリスト |
+| [coding-style.md](./coding-style.md) | 全体 | KISS/DRY/YAGNI、イミュータビリティ、ファイルサイズ、命名 |
+| [testing.md](./testing.md) | 全体 | カバレッジ80%、TDD ループ、AAA 構造 |
+| [development-workflow.md](./development-workflow.md) | 全体 | 調査 → 計画 → TDD → レビュー → コミット |
+| [git-workflow.md](./git-workflow.md) | 全体 | Conventional Commits 形式、PR ワークフロー |
+| [performance.md](./performance.md) | 全体 | モデル選択、コンテキストウィンドウ管理 |
+| [patterns.md](./patterns.md) | 全体 | Repository パターン、API レスポンスエンベロープ |
+| [agents.md](./agents.md) | 全体 | `.claude/agents/` のサブエージェントと使いどころ |
+| [typescript.md](./typescript.md) | `*.ts,*.tsx,*.js,*.jsx` | 型安全性、async の正しさ、バリデーション |
+
+パススコープのルールは `paths:` YAML フロントマターで適用範囲を宣言します。

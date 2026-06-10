@@ -71,6 +71,15 @@ These behaviors are automatic — the user should never have to ask for them:
 - Tests required for all changes
 - Commit format: `type: description`
 
+## Language Policy
+- Human-facing docs (README, AGENTS.md, CONTRIBUTING, SECURITY, index/README
+  files, script comments) are written in **Japanese** — the developers are
+  Japanese speakers.
+- AI-runtime files (this file, `.claude/rules/` bodies, `.claude/agents/`,
+  `.claude/skills/`, `.claude/commands/`, `.github/prompts/`, hook
+  stdout/stderr messages) stay in **English** for model precision.
+- Commit messages, Issues, and PRs may be Japanese.
+
 ## Agent Rules
 - Always link PR to Issue (`closes #N`)
 - Check existing utilities before creating new ones

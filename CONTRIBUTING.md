@@ -1,47 +1,59 @@
-# Contributing
+# コントリビューションガイド
 
-This repository is an AI-agent pipeline playground. Contributions follow the
-formats below so both humans and the autonomous pipeline can work with them.
+このリポジトリは AI エージェントパイプラインの実験場です。人間と自律
+パイプラインの両方が扱えるよう、以下のフォーマットに従ってください。
 
-## Before committing
+## ドキュメント言語ポリシー
 
-- `npm install` then `npm run lint` (Markdown lint must pass — it is the CI gate).
-- Keep changes minimal and focused; check existing utilities/rules before adding new ones.
-- Never include secrets, API keys, or credentials.
+基本は日本語、AI がランタイムで読み込むファイルのみ英語です。
 
-## Commit messages
+| 種別 | 言語 | 理由 |
+|------|------|------|
+| README / AGENTS.md / 本ファイル / SECURITY.md / 各種インデックス | **日本語** | 読者は日本語の開発者 |
+| スクリプト(hooks 等)内のコメント | **日本語** | メンテナンスするのは人間 |
+| `CLAUDE.md`、`.claude/rules/` 本文、`.claude/agents/`、`.claude/skills/`、`.claude/commands/`、`.github/prompts/` | **英語** | AI のコンテキストに直接読み込まれるため、精度・性能を優先 |
 
-Conventional commits, as documented in `CLAUDE.md` and enforced by
-`commitlint.config.js`:
+コミットメッセージ・Issue・PR は日本語で構いません。
+
+## コミット前に
+
+- `npm install` のあと `npm run verify`(lint + test。lint は CI のゲート)。
+- 変更は最小限・焦点を絞って。新規追加の前に既存のユーティリティ/ルールを確認。
+- シークレット、API キー、認証情報は絶対に含めない。
+
+## コミットメッセージ
+
+`CLAUDE.md` に記載のとおり Conventional Commits 形式
+(`commitlint.config.js` で強制):
 
 ```
 <type>: <description>
 ```
 
-Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`,
-`ci`, `build`, `revert`. Header ≤ 100 chars. (Subject-case is not enforced —
-Japanese subjects are expected.)
+type: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`,
+`ci`, `build`, `revert`。ヘッダは100文字以内。(subject-case は強制しない —
+日本語の subject を想定。)
 
-## Pull requests
+## プルリクエスト
 
-- Link the PR to its Issue (`closes #N`).
-- Ensure CI is green before requesting review.
-- The pipeline may review, fix CI, and (with the right label) merge automatically;
-  write changes so each is independently reviewable.
+- PR は Issue にリンクする(`closes #N`)。
+- レビュー依頼の前に CI がグリーンであることを確認。
+- パイプラインがレビュー・CI修正・(ラベル次第で)マージを自動で行うことが
+  あるため、各変更は独立してレビュー可能な単位にする。
 
-## File formats
+## ファイルフォーマット
 
-| Component | Location | Format |
-|-----------|----------|--------|
-| Agents | `.claude/agents/*.md` | Markdown + frontmatter (`name`, `description`, `tools`, `model`); filename matches `name` |
-| Commands | `.claude/commands/*.md` | Markdown + frontmatter (`description`, optional `argument-hint`) |
-| Rules | `.claude/rules/*.md` | Markdown; path-scoped rules add a `paths:` frontmatter block |
-| Prompts | `.github/prompts/*.md` | Markdown system prompts for pipeline stages |
-| Workflows | `.github/workflows/*.yml` | Pin action majors; set least-privilege `permissions` |
+| コンポーネント | 場所 | フォーマット |
+|---------------|------|-------------|
+| エージェント | `.claude/agents/*.md` | Markdown + フロントマター(`name`, `description`, `tools`, `model`)。ファイル名は `name` と一致 |
+| コマンド | `.claude/commands/*.md` | Markdown + フロントマター(`description`、任意で `argument-hint`) |
+| ルール | `.claude/rules/*.md` | Markdown。パススコープのルールは `paths:` フロントマターを付ける |
+| プロンプト | `.github/prompts/*.md` | パイプラインステージ用の Markdown システムプロンプト |
+| ワークフロー | `.github/workflows/*.yml` | アクションはメジャーバージョンを固定。最小権限の `permissions` を設定 |
 
-File naming: lowercase with hyphens (e.g. `typescript-reviewer.md`).
+ファイル名: 小文字ハイフン区切り(例: `typescript-reviewer.md`)。
 
-## Conventions
+## 規約
 
-Follow the always-on rules in `.claude/rules/` — especially `security.md`,
-`coding-style.md`, `testing.md`, and `code-review.md`.
+`.claude/rules/` の常時適用ルールに従ってください — 特に `security.md`、
+`coding-style.md`、`testing.md`、`code-review.md`。
