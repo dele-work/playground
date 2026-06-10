@@ -1,45 +1,49 @@
-# Agents
+# エージェント一覧
 
-This repository ships specialized Claude Code subagents in `.claude/agents/`.
-Each is a Markdown file with YAML frontmatter (`name`, `description`, `tools`,
-`model`) followed by its operating instructions. Adapted from
-[ECC](https://github.com/affaan-m/ECC) and trimmed to this repo's pipeline.
+このリポジトリは `.claude/agents/` に専門サブエージェントを同梱しています。
+各エージェントは YAML フロントマター(`name`, `description`, `tools`, `model`)
+付きの Markdown ファイルで、その後に動作指示が続きます。
+[ECC](https://github.com/affaan-m/ECC) を本リポジトリのパイプライン向けに
+取捨選択・調整したものです。
 
-## Pipeline core
+> エージェント定義本文は AI が直接読み込むため英語で記述しています
+> (言語ポリシーは `CONTRIBUTING.md` 参照)。
 
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| [`planner`](.claude/agents/planner.md) | opus | Break complex features/refactors into actionable, phased plans |
-| [`tdd-guide`](.claude/agents/tdd-guide.md) | sonnet | Enforce write-tests-first (RED→GREEN→REFACTOR), 80%+ coverage |
-| [`code-reviewer`](.claude/agents/code-reviewer.md) | sonnet | General quality/security review with confidence-based filtering |
-| [`typescript-reviewer`](.claude/agents/typescript-reviewer.md) | sonnet | TS/JS type-safety, async correctness, idiomatic patterns |
-| [`security-reviewer`](.claude/agents/security-reviewer.md) | sonnet | OWASP Top 10, secrets, injection, unsafe crypto |
-| [`build-error-resolver`](.claude/agents/build-error-resolver.md) | sonnet | Minimal build/type-error fixes, no refactoring |
+## パイプライン中核
 
-## General development
+| エージェント | モデル | 役割 |
+|-------------|--------|------|
+| [`planner`](.claude/agents/planner.md) | opus | 複雑な機能・リファクタを実行可能なフェーズに分解する実装計画 |
+| [`tdd-guide`](.claude/agents/tdd-guide.md) | sonnet | テストファースト(RED→GREEN→REFACTOR)を強制、カバレッジ80%以上 |
+| [`code-reviewer`](.claude/agents/code-reviewer.md) | sonnet | 品質・セキュリティの汎用レビュー(確信度ベースのフィルタリング) |
+| [`typescript-reviewer`](.claude/agents/typescript-reviewer.md) | sonnet | TS/JS の型安全性・async の正しさ・イディオム |
+| [`security-reviewer`](.claude/agents/security-reviewer.md) | sonnet | OWASP Top 10、シークレット、インジェクション、危険な暗号利用 |
+| [`build-error-resolver`](.claude/agents/build-error-resolver.md) | sonnet | ビルド/型エラーの最小修正(リファクタリングはしない) |
 
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| [`architect`](.claude/agents/architect.md) | opus | System design, scalability, technical decision-making |
-| [`code-explorer`](.claude/agents/code-explorer.md) | sonnet | Trace execution paths and map architecture of existing code |
-| [`refactor-cleaner`](.claude/agents/refactor-cleaner.md) | sonnet | Find and safely remove dead code/duplication (knip, depcheck, ts-prune) |
-| [`code-simplifier`](.claude/agents/code-simplifier.md) | sonnet | Simplify code for clarity while preserving behavior |
-| [`silent-failure-hunter`](.claude/agents/silent-failure-hunter.md) | sonnet | Find swallowed errors, bad fallbacks, missing error propagation |
-| [`type-design-analyzer`](.claude/agents/type-design-analyzer.md) | sonnet | Review type design for encapsulation and invariants |
-| [`comment-analyzer`](.claude/agents/comment-analyzer.md) | sonnet | Review comments for accuracy and comment-rot risk |
-| [`pr-test-analyzer`](.claude/agents/pr-test-analyzer.md) | sonnet | Assess PR test coverage quality and behavioral completeness |
-| [`performance-optimizer`](.claude/agents/performance-optimizer.md) | sonnet | Find bottlenecks, optimize runtime/bundle/memory |
-| [`database-reviewer`](.claude/agents/database-reviewer.md) | sonnet | SQL/schema/migration review and query optimization |
-| [`doc-updater`](.claude/agents/doc-updater.md) | haiku | Keep docs and architectural codemaps current with the code |
-| [`python-reviewer`](.claude/agents/python-reviewer.md) | sonnet | PEP 8, Pythonic idioms, type hints, security, performance |
+## 汎用開発
 
-## How the pipeline uses them
+| エージェント | モデル | 役割 |
+|-------------|--------|------|
+| [`architect`](.claude/agents/architect.md) | opus | システム設計、スケーラビリティ、技術的意思決定 |
+| [`code-explorer`](.claude/agents/code-explorer.md) | sonnet | 既存コードの実行パス追跡とアーキテクチャの把握 |
+| [`refactor-cleaner`](.claude/agents/refactor-cleaner.md) | sonnet | デッドコード・重複の検出と安全な削除(knip, depcheck, ts-prune) |
+| [`code-simplifier`](.claude/agents/code-simplifier.md) | sonnet | 挙動を変えずにコードを簡潔化 |
+| [`silent-failure-hunter`](.claude/agents/silent-failure-hunter.md) | sonnet | 握りつぶされたエラー、不適切なフォールバックの検出 |
+| [`type-design-analyzer`](.claude/agents/type-design-analyzer.md) | sonnet | 型設計のカプセル化・不変条件のレビュー |
+| [`comment-analyzer`](.claude/agents/comment-analyzer.md) | sonnet | コメントの正確性とコメント腐敗リスクのレビュー |
+| [`pr-test-analyzer`](.claude/agents/pr-test-analyzer.md) | sonnet | PR のテストカバレッジ品質・挙動網羅性の評価 |
+| [`performance-optimizer`](.claude/agents/performance-optimizer.md) | sonnet | ボトルネック検出、実行時間/バンドル/メモリの最適化 |
+| [`database-reviewer`](.claude/agents/database-reviewer.md) | sonnet | SQL・スキーマ・マイグレーションのレビューとクエリ最適化 |
+| [`doc-updater`](.claude/agents/doc-updater.md) | haiku | ドキュメントとコードマップをコードに追従させる |
+| [`python-reviewer`](.claude/agents/python-reviewer.md) | sonnet | PEP 8、Pythonic イディオム、型ヒント、セキュリティ |
 
-| Workflow stage | Prompt | Delegates to |
-|----------------|--------|--------------|
+## パイプラインでの使われ方
+
+| ワークフローステージ | プロンプト | 委譲先 |
+|---------------------|-----------|--------|
 | implement | `.github/prompts/implement.md` | `planner`, `tdd-guide` |
 | review | `.github/prompts/review.md` | `code-reviewer`, `typescript-reviewer`, `security-reviewer` |
 | fix-ci | `.github/prompts/fix-ci.md` | `build-error-resolver` |
 
-See `.claude/rules/agents.md` for when to invoke each agent and how to run them
-in parallel.
+各エージェントをいつ呼ぶか・並列実行の方法は `.claude/rules/agents.md` を
+参照してください。

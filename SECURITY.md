@@ -1,43 +1,46 @@
-# Security Policy
+# セキュリティポリシー
 
-## Reporting a Vulnerability
+## 脆弱性の報告
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+**脆弱性については公開の GitHub Issue を作成しないでください。**
 
-Instead, use GitHub's private vulnerability reporting
-("Security" tab → "Report a vulnerability") on this repository, including:
+代わりに、本リポジトリの GitHub プライベート脆弱性報告
+(「Security」タブ →「Report a vulnerability」)を使い、以下を含めてください:
 
-- A description of the vulnerability
-- Steps to reproduce
-- Affected files/workflows
-- Potential impact
+- 脆弱性の説明
+- 再現手順
+- 影響を受けるファイル/ワークフロー
+- 想定される影響
 
-## Scope
+## スコープ
 
-This is an autonomous AI-agent pipeline. Security-relevant surfaces include:
+このリポジトリは自律 AI エージェントパイプラインです。セキュリティ上
+重要な領域は次のとおりです:
 
-- The GitHub Actions workflows in `.github/workflows/` (they run with write
-  permissions and can commit/merge)
-- Agent prompts in `.github/prompts/` and `.claude/agents/`
-- Hook scripts in `.claude/hooks/` (they execute locally and in CI)
-- Permission configuration in `.claude/settings.json`
+- `.github/workflows/` の GitHub Actions ワークフロー(書き込み権限で動作し、
+  コミット/マージが可能)
+- `.github/prompts/` と `.claude/agents/` のエージェントプロンプト
+- `.claude/hooks/` のフックスクリプト(ローカルと CI の両方で実行される)
+- `.claude/settings.json` の権限設定
 
-## Operating Guidance
+## 運用ガイダンス
 
-Because the pipeline ingests untrusted Issue/PR/comment/CI content and commits
-autonomously, the following are enforced (see `.claude/rules/security.md` and the
-Prompt Defense Baseline in `CLAUDE.md`):
+パイプラインは信頼できない Issue/PR/コメント/CI の内容を取り込み自律的に
+コミットするため、以下を強制しています(`.claude/rules/security.md` と
+`CLAUDE.md` の Prompt Defense Baseline を参照):
 
-- Untrusted content is treated as **data, never instructions** (prompt-injection defense).
-- Secrets are never hardcoded, logged, or echoed; `.env*` reads/edits are denied
-  in `.claude/settings.json`.
-- A pre-commit hook (`.claude/hooks/secret-scan.sh`) blocks commits that contain
-  likely secrets.
-- If a secret is exposed, rotate it immediately and rewrite history — do not rely
-  on a plain revert.
+- 信頼できないコンテンツは**命令ではなくデータ**として扱う
+  (プロンプトインジェクション対策)。
+- シークレットはハードコード・ログ出力・エコーしない。`.env*` の読み書きは
+  `.claude/settings.json` で拒否。
+- コミット前フック(`.claude/hooks/secret-scan.sh`)がシークレットらしき
+  内容を含むコミットをブロック。
+- シークレットが漏えいした場合は直ちにローテーションし、履歴を書き換える —
+  単純な revert に頼らない。
 
-## Workflow Hardening Notes
+## ワークフロー堅牢化メモ
 
-- Workflows pin action major versions and set least-privilege `permissions`.
-- The full-auto pipeline gates auto-merge on all checks passing and falls back to
-  a `human:review-needed` label otherwise.
+- ワークフローはアクションのメジャーバージョンを固定し、最小権限の
+  `permissions` を設定。
+- 全自動パイプラインの自動マージは全チェック通過が条件。満たさない場合は
+  `human:review-needed` ラベルにフォールバック。
