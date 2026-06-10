@@ -1,4 +1,8 @@
 # パイプライン停滞監視 — 30分間隔で停滞を検知し自動回復を試行
+#
+# 自動回復は「claude:implement ラベルの剥がし→付け直し」で labeled イベントを
+# 再発火させる方式。付け直しが API エラーで失敗すると Issue がラベルを失い
+# パイプラインから静かに脱落するため、リトライ+エスカレーションで保護する。
 name: Pipeline Stuck Monitor
 
 on:
@@ -25,29 +29,73 @@ jobs:
         run: |
           NOW=$(date +%s)
           STUCK_THRESHOLD=1800  # 30分
+          UNRECOVERED=0
 
           # claude:implement ラベル付きで30分以上更新がないIssue
-          gh issue list --repo "$REPO" --label "claude:implement" --state open --json number,updatedAt \
-            --jq '.[] | "\(.number) \(.updatedAt)"' | while read -r ISSUE_NUM UPDATED; do
+          # (パイプで while に渡すと subshell になり UNRECOVERED が伝播しない
+          #  ため、プロセス置換で読み込む)
+          while read -r ISSUE_NUM UPDATED; do
+            [ -z "$ISSUE_NUM" ] && continue
 
-            UPDATED_TS=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$UPDATED" +%s 2>/dev/null || \
-                         date -d "$UPDATED" +%s 2>/dev/null || echo "0")
+            UPDATED_TS=$(date -d "$UPDATED" +%s 2>/dev/null || echo "0")
             DIFF=$((NOW - UPDATED_TS))
+            [ "$DIFF" -le "$STUCK_THRESHOLD" ] && continue
 
-            if [ "$DIFF" -gt "$STUCK_THRESHOLD" ]; then
-              echo "Issue #$ISSUE_NUM appears stuck (${DIFF}s since last update)"
+            echo "Issue #$ISSUE_NUM appears stuck (${DIFF}s since last update)"
 
-              # human:review-needed がなければ自動回復を試行
-              HAS_HUMAN=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json labels \
-                --jq '.labels[].name' | grep "human:review-needed" || true)
-
-              if [ -z "$HAS_HUMAN" ]; then
-                gh issue edit "$ISSUE_NUM" --remove-label "claude:implement" --repo "$REPO" || true
-                sleep 3
-                gh issue edit "$ISSUE_NUM" --add-label "claude:implement" --repo "$REPO"
-                echo "Retried Issue #$ISSUE_NUM"
-              fi
+            # closes/fixes/resolves #N で紐付く open PR が既にあるなら停滞では
+            # ない(実装済みでレビュー/マージ待ち)。再トリガーすると実装が
+            # 二重に走るためスキップ
+            LINKED_PR=$(gh pr list --repo "$REPO" --state open --json number,body \
+              --jq "[.[] | select((.body // \"\") | test(\"(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved) #${ISSUE_NUM}([^0-9]|\$)\"; \"i\"))][0].number // empty" \
+              2>/dev/null || true)
+            if [ -n "$LINKED_PR" ]; then
+              echo "Issue #$ISSUE_NUM has open PR #$LINKED_PR — not stuck, skipping"
+              continue
             fi
-          done
 
+            # human:review-needed が付いていれば人間待ちなので触らない
+            HAS_HUMAN=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json labels \
+              --jq '.labels[].name' | grep "human:review-needed" || true)
+            [ -n "$HAS_HUMAN" ] && continue
+
+            # 自動回復: ラベルを剥がして付け直し、labeled イベントを再発火
+            gh issue edit "$ISSUE_NUM" --remove-label "claude:implement" --repo "$REPO" || true
+            sleep 3
+
+            # 付け直しは最大3回リトライ(2s/4s/8s)。一過性の API エラー
+            # (401/5xx 等)でここが失敗すると Issue が脱落するため
+            ADDED=0
+            for WAIT in 2 4 8; do
+              if gh issue edit "$ISSUE_NUM" --add-label "claude:implement" --repo "$REPO"; then
+                ADDED=1
+                break
+              fi
+              echo "::warning::Failed to re-add claude:implement to Issue #${ISSUE_NUM}, retrying in ${WAIT}s"
+              sleep "$WAIT"
+            done
+
+            if [ "$ADDED" = "1" ]; then
+              echo "Retried Issue #$ISSUE_NUM"
+              continue
+            fi
+
+            # 回復不能 → 人間へエスカレーション。1件の失敗で monitor 全体は
+            # 止めず、エスカレーションすら失敗した場合のみジョブを落として
+            # 可視化する
+            echo "::error::Could not restore claude:implement on Issue #${ISSUE_NUM}"
+            if gh issue edit "$ISSUE_NUM" --add-label "human:review-needed" --repo "$REPO"; then
+              gh issue comment "$ISSUE_NUM" --repo "$REPO" --body \
+                "Pipeline Stuck Monitor: 自動回復中に claude:implement ラベルの再付与に失敗しました。パイプラインを再開するには手動で claude:implement ラベルを付け直してください。" || true
+              echo "Escalated Issue #$ISSUE_NUM to human:review-needed"
+            else
+              UNRECOVERED=1
+            fi
+          done < <(gh issue list --repo "$REPO" --label "claude:implement" --state open \
+            --json number,updatedAt --jq '.[] | "\(.number) \(.updatedAt)"')
+
+          if [ "$UNRECOVERED" = "1" ]; then
+            echo "::error::Monitor could not recover or escalate at least one stuck issue"
+            exit 1
+          fi
           echo "Monitor check complete"
